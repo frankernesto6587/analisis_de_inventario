@@ -207,13 +207,14 @@ export interface MetricsByProduct {
   producto: string;
   descripcion: string;
   unidadesVendidas: number;
-  ventasTotales: number;
-  cogs: number;
-  margenBruto: number;
+  ventasCup: number;      // Ventas en CUP (Precio × Cantidad)
+  ventasUsd: number;      // Ventas en USD (ventasCup / tasaPromedio)
+  cogs: number;           // Costo en USD (FIFO)
+  margenBruto: number;    // En USD (ventasUsd - cogs)
   margenPorcentaje: number;
   stockActual: number;
   valorInventario: number;
-  rotacion: number; // Unidades vendidas / Stock promedio
+  rotacion: number;       // Unidades vendidas / Stock promedio
 }
 
 export interface MetricsByPaymentMethod {

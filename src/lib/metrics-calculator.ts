@@ -227,7 +227,8 @@ export function calculateMetrics(
         producto: item.producto,
         descripcion: item.descripcion || producto?.descripcion || '',
         unidadesVendidas: 0,
-        ventasTotales: 0,
+        ventasCup: 0,
+        ventasUsd: 0,
         cogs: 0,
         margenBruto: 0,
         margenPorcentaje: 0,
@@ -238,11 +239,16 @@ export function calculateMetrics(
     }
 
     const p = porProductoMap.get(item.productoCodigo)!;
-    p.unidadesVendidas += Math.abs(item.unidadesTotal);
-    p.ventasTotales += (item.precio || 0) * Math.abs(item.cantidad);
+    p.unidadesVendidas += item.unidadesTotal;
+    p.ventasCup += (item.precio || 0) * item.cantidad;
     p.cogs += item.costoFifo || 0;
-    p.margenBruto = p.ventasTotales - p.cogs;
-    p.margenPorcentaje = p.ventasTotales > 0 ? (p.margenBruto / p.ventasTotales) * 100 : 0;
+  }
+
+  // Calcular ventasUsd y margen después de sumar todo
+  for (const p of porProductoMap.values()) {
+    p.ventasUsd = p.ventasCup / tasaPromedio;
+    p.margenBruto = p.ventasUsd - p.cogs;
+    p.margenPorcentaje = p.ventasUsd > 0 ? (p.margenBruto / p.ventasUsd) * 100 : 0;
   }
 
   // Agregar stock actual desde FIFO
@@ -264,7 +270,7 @@ export function calculateMetrics(
 
   // Top 10 productos por ventas
   const topProductosVentas = [...porProducto]
-    .sort((a, b) => b.ventasTotales - a.ventasTotales)
+    .sort((a, b) => b.ventasUsd - a.ventasUsd)
     .slice(0, 10);
 
   // Top 10 productos por merma
@@ -285,7 +291,8 @@ export function calculateMetrics(
       producto: `Producto ${codigo}`,
       descripcion: '',
       unidadesVendidas: 0,
-      ventasTotales: 0,
+      ventasCup: 0,
+      ventasUsd: 0,
       cogs: 0,
       margenBruto: 0,
       margenPorcentaje: 0,

@@ -195,6 +195,10 @@ export function parseProductos(
     'um',
     'costo',
     'precio',
+    'caja',
+    'pallet',
+    'palet',
+    'paquete',
   ]);
 
   const products: Product[] = [];
@@ -203,10 +207,11 @@ export function parseProductos(
   const colProducto = getColumnIndex(headers, 'producto');
   const colDescripcion = getColumnIndex(headers, 'descripcion');
   const colUM = getColumnIndex(headers, 'um');
-  const colCaja = getColumnIndex(headers, 'caja');
-  const colPallet = getColumnIndex(headers, 'pallet');
+  const colCaja = getColumnIndex(headers, 'caja', 'x caja', 'unid caja', 'unidades caja');
+  const colPallet = getColumnIndex(headers, 'pallet', 'palet', 'x pallet', 'unid pallet');
   const colCostoUnidad = getColumnIndex(headers, 'costo por unidad', 'costo');
   const colPrecioVenta = getColumnIndex(headers, 'precio venta', 'precio');
+
 
   for (let i = rowIndex + 1; i < data.length; i++) {
     const row = data[i];
@@ -220,14 +225,17 @@ export function parseProductos(
     if (!producto && !descripcion) continue;
 
     try {
+      const factorCaja = parseNumber(row[colCaja]);
+      const factorPallet = parseNumber(row[colPallet]);
+
       products.push({
         codigo,
         clase: cleanString(row[colClase]) || null,
         producto: producto || 'Sin nombre',
         descripcion: descripcion || producto || 'Sin descripción',
         um: cleanString(row[colUM]) || 'u',
-        factorCaja: parseNumber(row[colCaja]),
-        factorPallet: parseNumber(row[colPallet]),
+        factorCaja,
+        factorPallet,
         costoUnitario: parseNumber(row[colCostoUnidad]),
         precioVenta: parseNumber(row[colPrecioVenta]),
       });
@@ -265,6 +273,11 @@ export function parseVentas(
     'precio',
     'usd',
     'cup',
+    'um',
+    'unidades',
+    'gestor',
+    'comision',
+    'importe',
   ]);
 
   const ventasMap = new Map<string, Sale>();
@@ -376,7 +389,13 @@ export function parseVentas(
     if (gestor && !venta.gestor) venta.gestor = gestor;
 
     // Crear item de venta
-    const unidadesTotal = parseNumber(row[colUnidadesTotal]) || Math.abs(cantidad);
+    // Si cantidad es negativa (devolución), unidadesTotal también debe ser negativo
+    let unidadesTotal = parseNumber(row[colUnidadesTotal]) || Math.abs(cantidad);
+    if (cantidad < 0 && unidadesTotal > 0) {
+      unidadesTotal = -unidadesTotal; // Preservar signo negativo para devoluciones
+    }
+
+    const umValue = cleanString(row[colUM]) || 'u';
 
     items.push({
       id: generateId(),
@@ -385,7 +404,7 @@ export function parseVentas(
       producto: cleanString(row[colProducto]) || 'Sin nombre',
       descripcion: cleanString(row[colDescripcion]) || '',
       cantidad,
-      um: cleanString(row[colUM]) || 'u',
+      um: umValue,
       precio: parseNumber(row[colPrecio]),
       unidadesTotal,
       costoFifo: null,

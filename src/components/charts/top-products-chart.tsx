@@ -23,7 +23,7 @@ export function TopProductsChart({ data, metric }: TopProductsChartProps) {
     nombre: d.descripcion.length > 20 ? d.descripcion.substring(0, 20) + '...' : d.descripcion,
     valor:
       metric === 'ventas'
-        ? d.ventasTotales
+        ? d.ventasUsd
         : metric === 'unidades'
         ? d.unidadesVendidas
         : d.margenBruto,

@@ -65,19 +65,54 @@ export default function Home() {
   const metricsWithRate = useMemo(() => {
     if (!metrics || !recalcData) return metrics;
 
-    const { cogs, inventoryValue, shrinkageCost } = recalcData;
+    const { cogs } = recalcData;
     const totalVentasCup = metrics.ventasTotales.total;
 
-    // Recalcular valores que dependen de la tasa
+    // Recalcular valores generales que dependen de la tasa
     const ingresosTotalUsd = totalVentasCup / tasaPromedio;
     const margenBruto = ingresosTotalUsd - cogs;
     const margenPorcentaje = ingresosTotalUsd > 0 ? (margenBruto / ingresosTotalUsd) * 100 : 0;
+
+    // Recalcular métricas por producto
+    const porProducto = metrics.porProducto.map((p) => {
+      const ventasUsd = p.ventasCup / tasaPromedio;
+      const margenBrutoP = ventasUsd - p.cogs;
+      const margenPorcentajeP = ventasUsd > 0 ? (margenBrutoP / ventasUsd) * 100 : 0;
+      return {
+        ...p,
+        ventasUsd,
+        margenBruto: margenBrutoP,
+        margenPorcentaje: margenPorcentajeP,
+      };
+    });
+
+    // Recalcular top productos (ordenar por nuevo ventasUsd)
+    const topProductosVentas = [...porProducto]
+      .sort((a, b) => b.ventasUsd - a.ventasUsd)
+      .slice(0, 10);
+
+    // Recalcular métricas por periodo
+    const porPeriodo = metrics.porPeriodo.map((p) => ({
+      ...p,
+      // ventasTotales ya incluye conversión, recalcular no es trivial sin datos raw
+      // Por ahora mantener el valor original
+    }));
+
+    // Recalcular métricas por entidad
+    const porEntidad = metrics.porEntidad.map((e) => ({
+      ...e,
+      // Similar a porPeriodo
+    }));
 
     return {
       ...metrics,
       tasaPromedio,
       margenBruto,
       margenPorcentaje,
+      porProducto,
+      topProductosVentas,
+      porPeriodo,
+      porEntidad,
     };
   }, [metrics, recalcData, tasaPromedio]);
 
@@ -190,6 +225,8 @@ export default function Home() {
               sheetsDetected={data.metadata.hojasDetectadas}
               tasaPromedio={tasaPromedio}
               onTasaChange={handleTasaChange}
+              lotes={data.fifoState.lotes}
+              consumos={data.fifoState.consumos}
             />
           </div>
         ) : null}

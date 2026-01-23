@@ -2,12 +2,16 @@
 
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import type { MetricsByProduct } from '@/types';
+import { cn, formatPercent } from '@/lib/utils';
+import { FormattedNumber, FormattedCurrency } from '@/components/ui/formatted-value';
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye } from 'lucide-react';
+import { FIFODetailModal } from './fifo-detail-modal';
+import type { MetricsByProduct, FIFOLot, FIFOConsumption } from '@/types';
 
 interface ProductsTableProps {
   data: MetricsByProduct[];
+  lotes?: FIFOLot[];
+  consumos?: FIFOConsumption[];
 }
 
 type SortKey = keyof MetricsByProduct;
@@ -15,12 +19,13 @@ type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-export function ProductsTable({ data }: ProductsTableProps) {
+export function ProductsTable({ data, lotes = [], consumos = [] }: ProductsTableProps) {
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('ventasTotales');
+  const [sortKey, setSortKey] = useState<SortKey>('ventasUsd');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedProduct, setSelectedProduct] = useState<MetricsByProduct | null>(null);
 
   // Filtrar
   const filteredData = useMemo(() => {
@@ -150,19 +155,21 @@ export function ProductsTable({ data }: ProductsTableProps) {
               <HeaderCell column="codigo" label="Código" />
               <HeaderCell column="descripcion" label="Producto" />
               <HeaderCell column="unidadesVendidas" label="Vendidas" align="right" />
-              <HeaderCell column="ventasTotales" label="Ventas (USD)" align="right" />
+              <HeaderCell column="ventasCup" label="Ventas CUP" align="right" />
+              <HeaderCell column="ventasUsd" label="Ventas USD" align="right" />
               <HeaderCell column="cogs" label="COGS" align="right" />
               <HeaderCell column="margenBruto" label="Margen" align="right" />
               <HeaderCell column="margenPorcentaje" label="%" align="right" />
               <HeaderCell column="stockActual" label="Stock" align="right" />
               <HeaderCell column="valorInventario" label="Valor Inv." align="right" />
               <HeaderCell column="rotacion" label="Rotación" align="right" />
+              <th className="px-3 py-3 text-center text-zinc-400">FIFO</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-zinc-500">
+                <td colSpan={12} className="px-3 py-8 text-center text-zinc-500">
                   No se encontraron productos
                 </td>
               </tr>
@@ -170,7 +177,8 @@ export function ProductsTable({ data }: ProductsTableProps) {
               paginatedData.map((p) => (
                 <tr
                   key={p.codigo}
-                  className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+                  className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                  onClick={() => setSelectedProduct(p)}
                 >
                   <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
                     {p.codigo}
@@ -184,22 +192,24 @@ export function ProductsTable({ data }: ProductsTableProps) {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">
-                    {formatNumber(p.unidadesVendidas)}
+                    <FormattedNumber value={p.unidadesVendidas} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">
-                    {formatCurrency(p.ventasTotales)}
+                    <FormattedNumber value={p.ventasCup} />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">
+                    <FormattedCurrency value={p.ventasUsd} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-400">
-                    {formatCurrency(p.cogs)}
+                    <FormattedCurrency value={p.cogs} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right">
-                    <span
+                    <FormattedCurrency
+                      value={p.margenBruto}
                       className={cn(
                         p.margenBruto >= 0 ? 'text-emerald-400' : 'text-red-400'
                       )}
-                    >
-                      {formatCurrency(p.margenBruto)}
-                    </span>
+                    />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right">
                     <span
@@ -216,19 +226,30 @@ export function ProductsTable({ data }: ProductsTableProps) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right">
-                    <span
+                    <FormattedNumber
+                      value={p.stockActual}
                       className={cn(
                         p.stockActual < 0 ? 'text-red-400' : 'text-zinc-300'
                       )}
-                    >
-                      {formatNumber(p.stockActual)}
-                    </span>
+                    />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-400">
-                    {formatCurrency(p.valorInventario)}
+                    <FormattedCurrency value={p.valorInventario} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">
                     {p.rotacion.toFixed(2)}x
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProduct(p);
+                      }}
+                      className="rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-emerald-400"
+                      title="Ver desglose FIFO"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -311,6 +332,18 @@ export function ProductsTable({ data }: ProductsTableProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de detalles FIFO */}
+      {selectedProduct && (
+        <FIFODetailModal
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          productoCodigo={selectedProduct.codigo}
+          productoNombre={selectedProduct.descripcion}
+          lotes={lotes}
+          consumos={consumos}
+        />
       )}
     </Card>
   );

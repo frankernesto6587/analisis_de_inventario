@@ -199,14 +199,13 @@ export class FIFOEngine {
 
   // Procesar ventas
   processVentas(items: SaleItem[]): SaleItem[] {
-    // Ordenar por fecha (necesitamos la fecha de la venta, pero solo tenemos ventaId)
-    // Procesar en orden de aparición que debería ser cronológico
     const processedItems: SaleItem[] = [];
 
     for (const item of items) {
-      // Solo procesar cantidades positivas (no ajustes negativos)
-      const cantidad = item.unidadesTotal > 0 ? item.unidadesTotal : Math.abs(item.cantidad);
+      // Usar unidadesTotal si es positivo, sino es una devolución
+      const cantidad = item.unidadesTotal > 0 ? item.unidadesTotal : 0;
 
+      // Devoluciones (cantidad <= 0) no consumen inventario
       if (cantidad <= 0) {
         processedItems.push({ ...item, costoFifo: 0, margenBruto: 0 });
         continue;
@@ -215,7 +214,7 @@ export class FIFOEngine {
       const { costoTotal } = this.processSalida(
         item.productoCodigo,
         cantidad,
-        new Date(), // Usamos fecha actual como proxy
+        new Date(),
         'VENTA',
         `VENTA-${item.id}`
       );

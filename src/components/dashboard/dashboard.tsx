@@ -11,16 +11,18 @@ import { TopProductsChart } from '@/components/charts/top-products-chart';
 import { PaymentMethodsChart } from '@/components/charts/payment-methods-chart';
 import { EntitiesChart } from '@/components/charts/entities-chart';
 import { TrendingUp, Package, Building2, CreditCard, BarChart3, Settings } from 'lucide-react';
-import type { DashboardMetrics } from '@/types';
+import type { DashboardMetrics, FIFOLot, FIFOConsumption } from '@/types';
 
 interface DashboardProps {
   metrics: DashboardMetrics;
   sheetsDetected: string[];
   tasaPromedio: number;
   onTasaChange: (tasa: number) => void;
+  lotes?: FIFOLot[];
+  consumos?: FIFOConsumption[];
 }
 
-export function Dashboard({ metrics, sheetsDetected, tasaPromedio, onTasaChange }: DashboardProps) {
+export function Dashboard({ metrics, sheetsDetected, tasaPromedio, onTasaChange, lotes = [], consumos = [] }: DashboardProps) {
   const [tempTasa, setTempTasa] = useState(tasaPromedio.toString());
 
   // Sincronizar si el prop cambia externamente
@@ -126,7 +128,7 @@ export function Dashboard({ metrics, sheetsDetected, tasaPromedio, onTasaChange 
         <h2 className="mb-4 text-lg font-semibold text-white">
           Análisis por Producto
         </h2>
-        <ProductsTable data={metrics.porProducto} />
+        <ProductsTable data={metrics.porProducto} lotes={lotes} consumos={consumos} />
       </div>
     </div>
   );
