@@ -342,29 +342,30 @@ export function parseVentas(
     const importeCup = parseNumber(row[colImporteCUP]);
     const comision = parseNumber(row[colComision]);
 
-    // Sumar pagos de cada línea
-    if (usd && usd > 0) {
+    // Sumar pagos de cada línea (incluir valores negativos para reembolsos)
+    if (usd && usd !== 0) {
       venta.usd += usd;
       // Guardar última tasa encontrada
       const tasa = parseNumber(row[colTasaUSD]);
       if (tasa) venta.tasaUsd = tasa;
     }
-    if (euro && euro > 0) {
+    if (euro && euro !== 0) {
       venta.euro += euro;
       const tasa = parseNumber(row[colTasaEURO]);
       if (tasa) venta.tasaEuro = tasa;
     }
-    if (cupTransf && cupTransf > 0) {
+    if (cupTransf && cupTransf !== 0) {
       venta.cupTransferencia += cupTransf;
     }
-    if (cupEfec && cupEfec > 0) {
+    if (cupEfec && cupEfec !== 0) {
       venta.cupEfectivo += cupEfec;
     }
     // Importe CUP = suma de todos los importes de cada línea (TOTAL VENTA)
-    if (importeCup && importeCup > 0) {
+    // Incluir valores negativos para que reembolsos cancelen correctamente
+    if (importeCup && importeCup !== 0) {
       venta.importeCup += importeCup;
     }
-    if (comision && comision > 0) {
+    if (comision && comision !== 0) {
       venta.comision += comision;
     }
 

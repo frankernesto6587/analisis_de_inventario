@@ -224,6 +224,9 @@ export interface MetricsByPaymentMethod {
 }
 
 export interface DashboardMetrics {
+  // Configuración de tasa
+  tasaPromedio: number; // Tasa CUP/USD para conversiones
+
   // Resumen general
   ventasTotales: {
     total: number; // TOTAL EN CUP (todos los métodos de pago)

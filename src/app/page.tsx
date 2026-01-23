@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Button } from '@/components/ui/button';
 import { Dashboard } from '@/components/dashboard/dashboard';
 import { BarChart3, RefreshCw, Loader2 } from 'lucide-react';
 import type { NormalizedData, DashboardMetrics } from '@/types';
 
+// Datos adicionales necesarios para recalcular métricas
+interface RecalculationData {
+  cogs: number;
+  inventoryValue: number;
+  shrinkageCost: number;
+}
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<NormalizedData | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [tasaPromedio, setTasaPromedio] = useState<number>(400);
+  const [recalcData, setRecalcData] = useState<RecalculationData | null>(null);
 
   const handleFileSelect = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -34,6 +43,8 @@ export default function Home() {
 
       setData(result.data);
       setMetrics(result.metrics);
+      setRecalcData(result.recalcData);
+      setTasaPromedio(result.recalcData?.tasaPromedio || 400);
     } catch (err) {
       console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -45,7 +56,35 @@ export default function Home() {
   const handleReset = useCallback(() => {
     setData(null);
     setMetrics(null);
+    setRecalcData(null);
     setError(null);
+    setTasaPromedio(400);
+  }, []);
+
+  // Recalcular métricas cuando cambie la tasa
+  const metricsWithRate = useMemo(() => {
+    if (!metrics || !recalcData) return metrics;
+
+    const { cogs, inventoryValue, shrinkageCost } = recalcData;
+    const totalVentasCup = metrics.ventasTotales.total;
+
+    // Recalcular valores que dependen de la tasa
+    const ingresosTotalUsd = totalVentasCup / tasaPromedio;
+    const margenBruto = ingresosTotalUsd - cogs;
+    const margenPorcentaje = ingresosTotalUsd > 0 ? (margenBruto / ingresosTotalUsd) * 100 : 0;
+
+    return {
+      ...metrics,
+      tasaPromedio,
+      margenBruto,
+      margenPorcentaje,
+    };
+  }, [metrics, recalcData, tasaPromedio]);
+
+  const handleTasaChange = useCallback((newTasa: number) => {
+    if (newTasa > 0) {
+      setTasaPromedio(newTasa);
+    }
   }, []);
 
   return (
@@ -143,12 +182,14 @@ export default function Home() {
               </div>
             </div>
           </div>
-        ) : metrics ? (
+        ) : metricsWithRate ? (
           // Dashboard View
           <div className="animate-fade-in">
             <Dashboard
-              metrics={metrics}
+              metrics={metricsWithRate}
               sheetsDetected={data.metadata.hojasDetectadas}
+              tasaPromedio={tasaPromedio}
+              onTasaChange={handleTasaChange}
             />
           </div>
         ) : null}

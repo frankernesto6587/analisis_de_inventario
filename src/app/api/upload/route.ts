@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`FIFO: ${fifoResult.state.lotes.length} lotes, ${fifoResult.state.warnings.length} warnings`);
 
-    // Calcular métricas
+    // Calcular métricas (tasa por defecto 400, editable en el dashboard)
+    const tasaPromedio = 400;
     console.log('Calculating metrics...');
     const metrics = calculateMetrics({
       productos: parsedData.productos,
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
       inventoryValue: fifoResult.inventoryValue,
       cogs: fifoResult.cogs,
       shrinkageCost: fifoResult.shrinkageCost,
+      tasaPromedio,
     });
 
     // Construir respuesta
@@ -84,6 +86,13 @@ export async function POST(request: NextRequest) {
         },
       },
       metrics,
+      // Datos para recálculo cuando cambie la tasa
+      recalcData: {
+        cogs: fifoResult.cogs,
+        inventoryValue: fifoResult.inventoryValue,
+        shrinkageCost: fifoResult.shrinkageCost,
+        tasaPromedio,
+      },
     };
 
     return NextResponse.json(response);

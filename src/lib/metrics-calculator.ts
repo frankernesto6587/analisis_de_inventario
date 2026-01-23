@@ -34,6 +34,7 @@ interface CalculatorInput {
   inventoryValue: number;
   cogs: number;
   shrinkageCost: number;
+  tasaPromedio?: number; // Tasa CUP/USD para conversiones
 }
 
 export function calculateMetrics(
@@ -52,6 +53,7 @@ export function calculateMetrics(
     inventoryValue,
     cogs,
     shrinkageCost,
+    tasaPromedio = 400, // Valor por defecto
   } = input;
 
   // Aplicar filtros si existen
@@ -122,8 +124,7 @@ export function calculateMetrics(
     usd: compras.reduce((sum, c) => sum + c.importeTotal, 0),
   };
 
-  // Margen bruto (usando total en CUP convertido a USD con tasa aproximada)
-  const tasaPromedio = 400; // Tasa CUP/USD aproximada
+  // Margen bruto (usando total en CUP convertido a USD con tasa configurable)
   const ingresosTotalUsd = totalVentasCup / tasaPromedio;
   const margenBruto = ingresosTotalUsd - cogs;
   const margenPorcentaje = ingresosTotalUsd > 0 ? (margenBruto / ingresosTotalUsd) * 100 : 0;
@@ -161,7 +162,7 @@ export function calculateMetrics(
     }
 
     const m = porPeriodoMap.get(periodo)!;
-    m.ventasTotales += venta.usd + venta.euro + (venta.importeCup / 400);
+    m.ventasTotales += venta.usd + venta.euro + (venta.importeCup / tasaPromedio);
     m.numeroVentas += 1;
   }
 
@@ -204,7 +205,7 @@ export function calculateMetrics(
     }
 
     const e = porEntidadMap.get(entidad)!;
-    e.ventasTotales += venta.usd + venta.euro + (venta.importeCup / 400);
+    e.ventasTotales += venta.usd + venta.euro + (venta.importeCup / tasaPromedio);
     e.numeroVentas += 1;
   }
 
@@ -360,6 +361,9 @@ export function calculateMetrics(
   ).length;
 
   return {
+    // Configuración
+    tasaPromedio,
+
     // Resumen general
     ventasTotales,
     numeroVentas,
