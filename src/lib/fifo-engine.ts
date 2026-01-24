@@ -64,7 +64,7 @@ export class FIFOEngine {
     return null;
   }
 
-  // Crear lotes desde recepciones
+  // Crear lotes desde recepciones (y procesar recepciones negativas como salidas)
   processRecepciones(recepciones: Reception[]): void {
     // Ordenar por fecha
     const sorted = [...recepciones].sort(
@@ -72,7 +72,20 @@ export class FIFOEngine {
     );
 
     for (const rec of sorted) {
-      if (rec.unidades <= 0) continue;
+      // Recepción negativa = devolución a proveedor o ajuste
+      if (rec.unidades < 0) {
+        this.processSalida(
+          rec.productoCodigo,
+          Math.abs(rec.unidades),
+          rec.fecha,
+          'AJUSTE',
+          `DEVOLUCION_PROVEEDOR-${rec.numero}`
+        );
+        continue;
+      }
+
+      // Recepción cero = ignorar
+      if (rec.unidades === 0) continue;
 
       // Obtener costo desde compras
       let costoUnitario = rec.costoUnitario;
@@ -197,20 +210,99 @@ export class FIFOEngine {
     return { costoTotal, consumos: consumosGenerados };
   }
 
+  // Obtener costo promedio de un producto desde sus lotes
+  private getCostoPromedio(productoCodigo: number): number {
+    const lotes = this.lotes.get(productoCodigo) || [];
+    if (lotes.length === 0) {
+      const producto = this.productos.get(productoCodigo);
+      return producto?.costoUnitario || 0;
+    }
+
+    // Calcular costo promedio ponderado de lotes con stock disponible
+    let totalValor = 0;
+    let totalCantidad = 0;
+
+    for (const lote of lotes) {
+      if (lote.cantidadDisponible > 0) {
+        totalValor += lote.cantidadDisponible * lote.costoUnitario;
+        totalCantidad += lote.cantidadDisponible;
+      }
+    }
+
+    // Si no hay stock disponible, usar promedio simple de costos de lotes
+    if (totalCantidad === 0) {
+      return lotes.reduce((sum, l) => sum + l.costoUnitario, 0) / lotes.length;
+    }
+
+    return totalValor / totalCantidad;
+  }
+
+  // Procesar devolución (crear lote y registrar costo negativo)
+  private processDevolucion(
+    productoCodigo: number,
+    cantidad: number,
+    referencia: string
+  ): number {
+    const unidadesDevueltas = Math.abs(cantidad);
+    const costoUnitario = this.getCostoPromedio(productoCodigo);
+    const costoDevolucion = unidadesDevueltas * costoUnitario;
+
+    // Crear nuevo lote con las unidades devueltas
+    const lote: FIFOLot = {
+      id: generateId(),
+      productoCodigo,
+      fechaEntrada: new Date(),
+      cantidadInicial: unidadesDevueltas,
+      cantidadDisponible: unidadesDevueltas,
+      costoUnitario,
+      referenciaOrigen: `DEVOLUCION-${referencia}`,
+      proveedor: null,
+    };
+
+    // Agregar al mapa de lotes
+    if (!this.lotes.has(productoCodigo)) {
+      this.lotes.set(productoCodigo, []);
+    }
+    this.lotes.get(productoCodigo)!.push(lote);
+
+    // Retornar costo negativo (reduce el COGS)
+    return -costoDevolucion;
+  }
+
   // Procesar ventas
   processVentas(items: SaleItem[]): SaleItem[] {
     const processedItems: SaleItem[] = [];
 
     for (const item of items) {
-      // Usar unidadesTotal si es positivo, sino es una devolución
-      const cantidad = item.unidadesTotal > 0 ? item.unidadesTotal : 0;
+      const cantidad = item.unidadesTotal;
 
-      // Devoluciones (cantidad <= 0) no consumen inventario
-      if (cantidad <= 0) {
+      // Devolución: unidadesTotal negativo
+      if (cantidad < 0) {
+        const costoDevolucion = this.processDevolucion(
+          item.productoCodigo,
+          cantidad,
+          item.id
+        );
+
+        const precio = item.precio || 0;
+        const ingresoTotal = precio * item.cantidad; // Negativo (reembolso)
+        const margenBruto = ingresoTotal - costoDevolucion;
+
+        processedItems.push({
+          ...item,
+          costoFifo: costoDevolucion, // Negativo
+          margenBruto,
+        });
+        continue;
+      }
+
+      // Cantidad cero: ignorar
+      if (cantidad === 0) {
         processedItems.push({ ...item, costoFifo: 0, margenBruto: 0 });
         continue;
       }
 
+      // Venta normal: consumir de FIFO
       const { costoTotal } = this.processSalida(
         item.productoCodigo,
         cantidad,
