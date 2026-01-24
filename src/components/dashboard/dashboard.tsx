@@ -128,7 +128,7 @@ export function Dashboard({ metrics, sheetsDetected, tasaPromedio, onTasaChange,
         <h2 className="mb-4 text-lg font-semibold text-white">
           Análisis por Producto
         </h2>
-        <ProductsTable data={metrics.porProducto} lotes={lotes} consumos={consumos} />
+        <ProductsTable data={metrics.porProducto} lotes={lotes} consumos={consumos} tasaPromedio={tasaPromedio} />
       </div>
     </div>
   );

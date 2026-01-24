@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn, formatPercent } from '@/lib/utils';
 import { FormattedNumber, FormattedCurrency } from '@/components/ui/formatted-value';
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info } from 'lucide-react';
 import { FIFODetailModal } from './fifo-detail-modal';
 import type { MetricsByProduct, FIFOLot, FIFOConsumption } from '@/types';
 
@@ -12,6 +12,7 @@ interface ProductsTableProps {
   data: MetricsByProduct[];
   lotes?: FIFOLot[];
   consumos?: FIFOConsumption[];
+  tasaPromedio?: number;
 }
 
 type SortKey = keyof MetricsByProduct;
@@ -19,7 +20,7 @@ type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-export function ProductsTable({ data, lotes = [], consumos = [] }: ProductsTableProps) {
+export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 400 }: ProductsTableProps) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('ventasUsd');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -117,6 +118,14 @@ export function ProductsTable({ data, lotes = [], consumos = [] }: ProductsTable
 
   return (
     <Card>
+      {/* Aviso sobre tasa de conversión */}
+      <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+        <Info className="h-5 w-5 flex-shrink-0 text-amber-400 mt-0.5" />
+        <p className="text-sm text-amber-200">
+          Los valores en USD (Ventas USD, COGS, Margen, Valor Inventario) se calculan utilizando la tasa de conversión de <span className="font-semibold text-amber-100">{tasaPromedio.toLocaleString()} CUP/USD</span> configurada en el panel superior. Modifique la tasa para ajustar estos cálculos según el tipo de cambio actual.
+        </p>
+      </div>
+
       {/* Barra de búsqueda y controles */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
