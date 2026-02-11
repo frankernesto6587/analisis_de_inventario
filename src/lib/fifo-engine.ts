@@ -452,16 +452,16 @@ export function processInventoryFIFO(
   // 1. Crear lotes desde recepciones
   engine.processRecepciones(recepciones);
 
-  // 2. Procesar salidas en orden cronológico
-  // Combinar ventas y mermas, ordenar por fecha aproximada
-  const processedMermas = engine.processMermas(mermas);
+  // 2. Procesar ventas (las mermas ya están incluidas como ventas a precio 0,
+  //    no se procesan por separado para evitar doble conteo en inventario)
   const processedItems = engine.processVentas(ventasItems);
+  const processedMermas = mermas; // Solo para reporte, sin consumir lotes
 
   // 3. Obtener resultados
   const state = engine.getState();
   const { total: inventoryValue } = engine.getInventoryValue();
   const cogs = engine.getCOGS();
-  const shrinkageCost = engine.getShrinkageCost();
+  const shrinkageCost = 0; // Ya incluido en COGS como ventas a precio 0
 
   return {
     processedItems,

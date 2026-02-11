@@ -43,8 +43,8 @@ function convertirUnidadesVentas(items: SaleItem[], productos: Product[]): SaleI
     const unidadesReales = Math.abs(item.cantidad) * factor;
 
     // Solo actualizar si unidadesTotal no fue calculado correctamente
-    // (es decir, si es igual a cantidad, significa que no se convirtió)
-    if (Math.abs(item.unidadesTotal - Math.abs(item.cantidad)) < 0.01) {
+    // (es decir, si es igual a |cantidad|, significa que no se convirtió)
+    if (Math.abs(Math.abs(item.unidadesTotal) - Math.abs(item.cantidad)) < 0.01) {
       return {
         ...item,
         unidadesTotal: item.cantidad >= 0 ? unidadesReales : -unidadesReales,

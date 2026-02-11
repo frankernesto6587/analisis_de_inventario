@@ -121,7 +121,7 @@ function detectHeaders(
   for (let i = 0; i < Math.min(20, data.length); i++) {
     const row = data[i] || [];
     const rowStrings = row.map((cell) =>
-      cleanString(cell).toLowerCase().replace(/\n/g, ' ')
+      cleanString(cell).toLowerCase().replace(/[\r\n]+/g, ' ').trim()
     );
 
     let matchCount = 0;
@@ -129,11 +129,12 @@ function detectHeaders(
 
     for (let j = 0; j < rowStrings.length; j++) {
       const cellValue = rowStrings[j];
+      if (!cellValue) continue; // Ignorar celdas vacías
       for (const expected of lowerExpected) {
         if (cellValue.includes(expected) || expected.includes(cellValue)) {
           matchCount++;
           // Guardar el nombre original (con mayúsculas)
-          const originalName = cleanString(row[j]).replace(/\n/g, ' ');
+          const originalName = cleanString(row[j]).replace(/[\r\n]+/g, ' ').trim();
           headerMap.set(originalName, j);
           break;
         }
@@ -150,7 +151,7 @@ function detectHeaders(
   const headerMap = new Map<string, number>();
   const row = data[0] || [];
   row.forEach((cell, idx) => {
-    const name = cleanString(cell).replace(/\n/g, ' ');
+    const name = cleanString(cell).replace(/[\r\n]+/g, ' ').trim();
     if (name) headerMap.set(name, idx);
   });
 
@@ -163,6 +164,7 @@ function getColumnIndex(
 ): number {
   for (const name of possibleNames) {
     for (const [headerName, idx] of headers) {
+      if (!headerName) continue; // Ignorar headers vacíos
       if (
         headerName.toLowerCase().includes(name.toLowerCase()) ||
         name.toLowerCase().includes(headerName.toLowerCase())
