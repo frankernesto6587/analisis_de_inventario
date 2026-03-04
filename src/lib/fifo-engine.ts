@@ -34,45 +34,41 @@ export class FIFOEngine {
   private consumos: FIFOConsumption[] = [];
   private warnings: FIFOWarning[] = [];
   private productos: Map<number, Product> = new Map();
-  private comprasPorNumero: Map<number, Purchase> = new Map();
-  private comprasUsadas: Set<number> = new Set(); // números de compra ya vinculadas
+  private comprasPorProducto: Map<number, Purchase[]> = new Map(); // productoCodigo -> compras ordenadas
+  private compraIndice: Map<number, number> = new Map(); // productoCodigo -> siguiente índice de compra
 
   constructor(productos: Product[], compras: Purchase[]) {
     // Indexar productos
     for (const p of productos) {
       this.productos.set(p.codigo, p);
     }
-    // Indexar compras por número para vincular con recepciones
+    // Agrupar compras por producto, ordenadas por número (orden secuencial)
     for (const c of compras) {
-      this.comprasPorNumero.set(c.numero, c);
+      if (!this.comprasPorProducto.has(c.productoCodigo)) {
+        this.comprasPorProducto.set(c.productoCodigo, []);
+      }
+      this.comprasPorProducto.get(c.productoCodigo)!.push(c);
+    }
+    // Ordenar cada grupo por número de compra
+    for (const [, lista] of this.comprasPorProducto) {
+      lista.sort((a, b) => a.numero - b.numero);
     }
   }
 
   // Obtener costo unitario desde compras vinculadas a recepción
-  // Prioriza por fecha más cercana y no reutiliza compras ya vinculadas
+  // Asignación 1-a-1 en orden secuencial: 1ra recepción → 1ra compra, etc.
   private getCostoFromCompra(recepcion: Reception): number | null {
-    let mejorCompra: Purchase | null = null;
-    let mejorDiff = Infinity;
+    const compras = this.comprasPorProducto.get(recepcion.productoCodigo);
+    if (!compras || compras.length === 0) return null;
 
-    for (const [, compra] of this.comprasPorNumero) {
-      if (this.comprasUsadas.has(compra.numero)) continue;
-      if (compra.productoCodigo !== recepcion.productoCodigo) continue;
-      if (compra.unidades <= 0) continue;
+    const idx = this.compraIndice.get(recepcion.productoCodigo) || 0;
+    if (idx >= compras.length) return null;
 
-      const diffDays = Math.abs(
-        (recepcion.fecha.getTime() - compra.fecha.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (diffDays <= 7 && diffDays < mejorDiff) {
-        mejorDiff = diffDays;
-        mejorCompra = compra;
-      }
-    }
+    const compra = compras[idx];
+    this.compraIndice.set(recepcion.productoCodigo, idx + 1);
 
-    if (mejorCompra) {
-      this.comprasUsadas.add(mejorCompra.numero);
-      return mejorCompra.importeTotal / mejorCompra.unidades;
-    }
-    return null;
+    if (compra.unidades <= 0) return null;
+    return compra.importeTotal / compra.unidades;
   }
 
   // Crear lotes desde recepciones (y procesar recepciones negativas como salidas)
