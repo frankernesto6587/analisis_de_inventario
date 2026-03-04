@@ -212,6 +212,7 @@ export interface MetricsByProduct {
   cogs: number;           // Costo en USD (FIFO)
   margenBruto: number;    // En USD (ventasUsd - cogs)
   margenPorcentaje: number;
+  costoUnitario: number;  // Costo unitario promedio ponderado (USD)
   stockActual: number;
   valorInventario: number;
   rotacion: number;       // Unidades vendidas / Stock promedio

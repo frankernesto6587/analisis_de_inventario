@@ -232,6 +232,7 @@ export function calculateMetrics(
         cogs: 0,
         margenBruto: 0,
         margenPorcentaje: 0,
+        costoUnitario: 0,
         stockActual: 0,
         valorInventario: 0,
         rotacion: 0,
@@ -260,8 +261,9 @@ export function calculateMetrics(
     }
   }
 
-  // Calcular rotación
+  // Calcular costo unitario promedio ponderado y rotación
   for (const p of porProductoMap.values()) {
+    p.costoUnitario = p.stockActual > 0 ? p.valorInventario / p.stockActual : 0;
     const stockPromedio = p.stockActual > 0 ? p.stockActual : 1;
     p.rotacion = p.unidadesVendidas / stockPromedio;
   }
@@ -296,6 +298,7 @@ export function calculateMetrics(
       cogs: 0,
       margenBruto: 0,
       margenPorcentaje: 0,
+      costoUnitario: 0,
       stockActual: 0,
       valorInventario: 0,
       rotacion: 0,

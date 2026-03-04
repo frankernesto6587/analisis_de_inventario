@@ -91,6 +91,7 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
       'COGS (USD)': Math.round(p.cogs * 100) / 100,
       'Margen Bruto (USD)': Math.round(p.margenBruto * 100) / 100,
       'Margen %': Math.round(p.margenPorcentaje * 100) / 100,
+      'Costo Unitario (USD)': Math.round(p.costoUnitario * 100) / 100,
       'Stock Actual': p.stockActual,
       'Valor Inventario (USD)': Math.round(p.valorInventario * 100) / 100,
       'Rotación': Math.round(p.rotacion * 100) / 100,
@@ -210,6 +211,7 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
               <HeaderCell column="cogs" label="COGS" align="right" />
               <HeaderCell column="margenBruto" label="Margen" align="right" />
               <HeaderCell column="margenPorcentaje" label="%" align="right" />
+              <HeaderCell column="costoUnitario" label="C.Unit." align="right" />
               <HeaderCell column="stockActual" label="Stock" align="right" />
               <HeaderCell column="valorInventario" label="Valor Inv." align="right" />
               <HeaderCell column="rotacion" label="Rotación" align="right" />
@@ -219,7 +221,7 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-3 py-8 text-center text-zinc-500">
+                <td colSpan={13} className="px-3 py-8 text-center text-zinc-500">
                   No se encontraron productos
                 </td>
               </tr>
@@ -274,6 +276,9 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
                     >
                       {formatPercent(p.margenPorcentaje)}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-400">
+                    <FormattedCurrency value={p.costoUnitario} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right">
                     <FormattedNumber
