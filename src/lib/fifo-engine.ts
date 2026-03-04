@@ -35,6 +35,7 @@ export class FIFOEngine {
   private warnings: FIFOWarning[] = [];
   private productos: Map<number, Product> = new Map();
   private comprasPorNumero: Map<number, Purchase> = new Map();
+  private comprasUsadas: Set<number> = new Set(); // números de compra ya vinculadas
 
   constructor(productos: Product[], compras: Purchase[]) {
     // Indexar productos
@@ -48,18 +49,28 @@ export class FIFOEngine {
   }
 
   // Obtener costo unitario desde compras vinculadas a recepción
+  // Prioriza por fecha más cercana y no reutiliza compras ya vinculadas
   private getCostoFromCompra(recepcion: Reception): number | null {
-    // Buscar compra del mismo producto en fecha cercana
+    let mejorCompra: Purchase | null = null;
+    let mejorDiff = Infinity;
+
     for (const [, compra] of this.comprasPorNumero) {
-      if (compra.productoCodigo === recepcion.productoCodigo) {
-        // Si las fechas son cercanas (dentro de 7 días)
-        const diffDays = Math.abs(
-          (recepcion.fecha.getTime() - compra.fecha.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (diffDays <= 7 && compra.unidades > 0) {
-          return compra.importeTotal / compra.unidades;
-        }
+      if (this.comprasUsadas.has(compra.numero)) continue;
+      if (compra.productoCodigo !== recepcion.productoCodigo) continue;
+      if (compra.unidades <= 0) continue;
+
+      const diffDays = Math.abs(
+        (recepcion.fecha.getTime() - compra.fecha.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays <= 7 && diffDays < mejorDiff) {
+        mejorDiff = diffDays;
+        mejorCompra = compra;
       }
+    }
+
+    if (mejorCompra) {
+      this.comprasUsadas.add(mejorCompra.numero);
+      return mejorCompra.importeTotal / mejorCompra.unidades;
     }
     return null;
   }
