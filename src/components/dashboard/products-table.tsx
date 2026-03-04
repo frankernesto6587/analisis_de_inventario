@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { cn, formatPercent } from '@/lib/utils';
 import { FormattedNumber, FormattedCurrency } from '@/components/ui/formatted-value';
 import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info, Download } from 'lucide-react';
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { FIFODetailModal } from './fifo-detail-modal';
 import type { MetricsByProduct, FIFOLot, FIFOConsumption } from '@/types';
 
