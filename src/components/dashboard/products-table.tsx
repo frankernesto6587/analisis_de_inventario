@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn, formatPercent } from '@/lib/utils';
 import { FormattedNumber, FormattedCurrency } from '@/components/ui/formatted-value';
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info, Download } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info, Download, BookOpen } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { FIFODetailModal } from './fifo-detail-modal';
 import type { MetricsByProduct, FIFOLot, FIFOConsumption } from '@/types';
@@ -28,6 +28,7 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedProduct, setSelectedProduct] = useState<MetricsByProduct | null>(null);
+  const [showDocs, setShowDocs] = useState(false);
 
   // Filtrar
   const filteredData = useMemo(() => {
@@ -388,6 +389,116 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
           </div>
         </div>
       )}
+
+      {/* Documentación de columnas */}
+      <div className="mt-6 border-t border-zinc-800 pt-4">
+        <button
+          onClick={() => setShowDocs(!showDocs)}
+          className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>{showDocs ? 'Ocultar' : 'Ver'} documentacion de columnas</span>
+          {showDocs ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )}
+        </button>
+
+        {showDocs && (
+          <div className="mt-4 space-y-4 text-sm text-zinc-400">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Codigo</h4>
+                <p>Codigo numerico unico del producto, tomado de la columna <span className="text-emerald-400">Codigo</span> de la hoja <span className="text-amber-300">Productos</span> del Excel.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Producto</h4>
+                <p>Nombre y descripcion del producto. Se muestra la <span className="text-emerald-400">Descripcion</span> como titulo y el <span className="text-emerald-400">Producto</span> (categoria/clase) debajo, ambos de la hoja <span className="text-amber-300">Productos</span>.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Vendidas</h4>
+                <p>Total de unidades vendidas del producto. Se suman las <span className="text-emerald-400">Unidades Total</span> de todos los items de venta de la hoja <span className="text-amber-300">Ventas</span>. Si la UM es Caja, se multiplica la cantidad por el <span className="text-emerald-400">Factor Caja</span> del producto. Las devoluciones (cantidades negativas) se restan automaticamente.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Ventas CUP</h4>
+                <p>Ingresos en CUP por producto. Se calcula como <span className="text-emerald-400">Precio</span> &times; <span className="text-emerald-400">Cantidad</span> de cada item de venta en la hoja <span className="text-amber-300">Ventas</span>, sumando todos los items del mismo producto.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Ventas USD</h4>
+                <p>Ingresos convertidos a dolares. Se calcula dividiendo las <span className="text-emerald-400">Ventas CUP</span> entre la <span className="text-amber-300">Tasa de Conversion</span> configurada en el panel superior (por defecto {tasaPromedio} CUP/USD).</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: Ventas USD = Ventas CUP &divide; Tasa</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">COGS (Cost of Goods Sold)</h4>
+                <p>Costo de los bienes vendidos, calculado con el metodo <span className="text-amber-300">FIFO</span> (First In, First Out). Cuando se vende una unidad, se consume el costo del lote mas antiguo disponible. Los lotes se crean a partir de las <span className="text-emerald-400">Recepciones</span> del Excel, y su costo unitario se obtiene vinculando con la hoja de <span className="text-amber-300">Compras</span> (mismo producto, fecha &plusmn;7 dias). Valor en USD.</p>
+                <p className="mt-1 text-xs text-zinc-500">Origen del costo: Compras &rarr; Recepciones &rarr; Lotes FIFO &rarr; Consumo por venta</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Margen Bruto</h4>
+                <p>Ganancia bruta por producto en USD. Es la diferencia entre los ingresos y el costo de lo vendido.</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: Margen = Ventas USD &minus; COGS</p>
+                <p className="mt-1 text-xs"><span className="text-emerald-400">Verde</span> = ganancia, <span className="text-red-400">Rojo</span> = perdida.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">% (Margen Porcentaje)</h4>
+                <p>Porcentaje de margen bruto sobre las ventas en USD.</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: % = (Margen Bruto &divide; Ventas USD) &times; 100</p>
+                <p className="mt-1 text-xs"><span className="text-emerald-400">&ge;20%</span> bueno, <span className="text-yellow-400">0-20%</span> bajo, <span className="text-red-400">&lt;0%</span> perdida.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">C.Unit. (Costo Unitario)</h4>
+                <p>Costo unitario promedio ponderado en USD del inventario actual. Se calcula dividiendo el valor total del inventario del producto entre las unidades en stock.</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: C.Unit. = Valor Inventario &divide; Stock Actual</p>
+                <p className="mt-1 text-xs text-zinc-500">Refleja el costo promedio de los lotes FIFO que aun tienen existencia.</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Stock</h4>
+                <p>Unidades actualmente disponibles en inventario. Se calcula sumando la <span className="text-emerald-400">cantidad disponible</span> de todos los lotes FIFO activos del producto.</p>
+                <p className="mt-1 text-xs text-zinc-500">Stock = &Sigma; Recepciones &minus; &Sigma; Ventas (incluye deterioro como ventas a precio 0)</p>
+                <p className="mt-1 text-xs"><span className="text-red-400">Rojo</span> = stock negativo (mas ventas que recepciones registradas).</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Valor Inv. (Valor Inventario)</h4>
+                <p>Valor monetario del inventario actual en USD. Se calcula multiplicando las unidades disponibles de cada lote FIFO por su costo unitario y sumando todos los lotes del producto.</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: Valor Inv. = &Sigma; (Cantidad Disponible del Lote &times; Costo Unitario del Lote)</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                <h4 className="mb-1 font-medium text-zinc-200">Rotacion</h4>
+                <p>Indicador de cuantas veces se ha vendido el inventario promedio del producto. Un valor alto indica alta demanda respecto al stock.</p>
+                <p className="mt-1 text-xs text-zinc-500">Formula: Rotacion = Unidades Vendidas &divide; Stock Actual</p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 sm:col-span-2">
+                <h4 className="mb-1 font-medium text-zinc-200">FIFO (Detalle)</h4>
+                <p>Al hacer clic en el icono <Eye className="inline h-3.5 w-3.5 text-emerald-400" /> o en cualquier fila, se abre un modal con el desglose completo de los lotes FIFO del producto: fecha de entrada, cantidad inicial y disponible, costo unitario, proveedor, y todos los consumos realizados (ventas y ajustes).</p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-700/50 bg-zinc-900/30 p-3">
+              <h4 className="mb-2 font-medium text-zinc-300">Origen de los datos</h4>
+              <div className="space-y-1 text-xs text-zinc-500">
+                <p><span className="text-amber-300">Productos</span> &rarr; Codigo, nombre, descripcion, factor de conversion (Caja/Pallet)</p>
+                <p><span className="text-amber-300">Ventas</span> &rarr; Items vendidos con precio, cantidad, unidades, metodo de pago (USD, EUR, CUP Transferencia, CUP Efectivo)</p>
+                <p><span className="text-amber-300">Compras</span> &rarr; Costo unitario de cada producto por proveedor y fecha</p>
+                <p><span className="text-amber-300">Recepciones</span> &rarr; Entrada fisica de mercancia al almacen (crea lotes FIFO)</p>
+                <p><span className="text-amber-300">Deterioro</span> &rarr; Registrado como ventas a precio $0 en la hoja de Ventas (ya incluido en el calculo de stock)</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Modal de detalles FIFO */}
       {selectedProduct && (
