@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn, formatPercent } from '@/lib/utils';
 import { FormattedNumber, FormattedCurrency } from '@/components/ui/formatted-value';
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Info, Download } from 'lucide-react';
+import XLSX from 'xlsx';
 import { FIFODetailModal } from './fifo-detail-modal';
 import type { MetricsByProduct, FIFOLot, FIFOConsumption } from '@/types';
 
@@ -79,6 +80,35 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
     setCurrentPage(1);
   };
 
+  const handleDownload = () => {
+    const rows = sortedData.map((p) => ({
+      'Código': p.codigo,
+      'Producto': p.descripcion,
+      'Categoría': p.producto,
+      'Unidades Vendidas': p.unidadesVendidas,
+      'Ventas CUP': Math.round(p.ventasCup * 100) / 100,
+      'Ventas USD': Math.round(p.ventasUsd * 100) / 100,
+      'COGS (USD)': Math.round(p.cogs * 100) / 100,
+      'Margen Bruto (USD)': Math.round(p.margenBruto * 100) / 100,
+      'Margen %': Math.round(p.margenPorcentaje * 100) / 100,
+      'Stock Actual': p.stockActual,
+      'Valor Inventario (USD)': Math.round(p.valorInventario * 100) / 100,
+      'Rotación': Math.round(p.rotacion * 100) / 100,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Análisis por Producto');
+
+    // Auto-ajustar ancho de columnas
+    const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+      wch: Math.max(key.length, 12),
+    }));
+    ws['!cols'] = colWidths;
+
+    XLSX.writeFile(wb, 'analisis_productos.xlsx');
+  };
+
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (column !== sortKey) {
       return <ChevronUp className="h-3 w-3 opacity-0 group-hover:opacity-30" />;
@@ -139,20 +169,31 @@ export function ProductsTable({ data, lotes = [], consumos = [], tasaPromedio = 
           />
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <span>Mostrar:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 focus:border-emerald-500 focus:outline-none"
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
+            <span>Mostrar:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 focus:border-emerald-500 focus:outline-none"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            <span>de {sortedData.length}</span>
+          </div>
+
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:border-emerald-500 hover:text-emerald-400 transition-colors"
+            title="Descargar como Excel"
           >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-          <span>de {sortedData.length}</span>
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
         </div>
       </div>
 
